@@ -40,7 +40,8 @@ I think it sort of self-descriptive:
 
 An concrete example would be that:
 
-``Timestamp for when the attempt was submitted;@title='Attempt submission datetime';@assert=['lower_than(report_timestamp)']``
+``Timestamp for when the attempt was submitted;@title='Attempt submission datetime';
+@assert=['lower_than(report_timestamp)']``
 
 #### Reserved variables
 *title (str)*: an friendly title for the column or table
