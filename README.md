@@ -1,8 +1,12 @@
+# meta-qa
+
+An practical one-liner metalanguage.
+
 ## Introduction
 
 ### What is this about
 
-Several cloud databases providers, like Google BigQuery and Amazon Redshift, 
+Several cloud databases providers, like Google BigQuery and Amazon Redshift,
 allows to put text descriptions and labels into the schemas, and in an
 column-wise manner.
 
@@ -14,7 +18,7 @@ using on the description fields both on the tables and columns, and which
 aims to input our knowlodge about what is contained inside them.
 
 meta_qa, then, is an library that perform queries for getting the metadata,
-parses it, generates an documentation based on it, and performs associated 
+parses it, generates an documentation based on it, and performs associated
 operations.
 
 ### Typical use cases
@@ -69,7 +73,7 @@ An concrete example would be that:
 
 *timestamp_sanity()*: Filter between -1d behind a priori definded data and +1d from now.
 
-*related_to(str other_table, str_opt other_column)*: 
+*related_to(str other_table, str_opt other_column)*:
 
 
 ### Automatic documentation generation
