@@ -1,6 +1,7 @@
 # meta-qa
 
-An practical one-liner metalanguage.
+An practical one-liner metalanguage for describing common-sense in an
+machine-friendly way.
 
 ## Introduction
 
@@ -33,7 +34,7 @@ operations.
 ## How to use it
 
 First, go to your dataset and input some descriptions in your tables and columns
-using the meta_qa syntax.
+using the meta_qa syntax. (To be written)
 
 ### meta_qa syntax
 
@@ -48,6 +49,8 @@ An concrete example would be that:
 @assert=['lower_than(report_timestamp)']``
 
 #### Reserved variables
+
+*description (str)*: Do not use this variable.
 
 *title (str)*: an friendly title for the column or table
 
@@ -87,3 +90,9 @@ To be written.
 ## How to modify it
 
 To be written.
+
+* meta_qa/metadata.py - Abstract implementation of the QA-metadata object.
+* meta_qa/parser.py - Functions for parsing the meta_qa syntax.
+* meta_qa/integrations - Implementations for retrieving metadata and execution
+  of operators.
+* meta_qa/tools - Practical applications of the meta_qa for daily usage.
