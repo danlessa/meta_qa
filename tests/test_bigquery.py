@@ -3,8 +3,8 @@ from meta_qa.integrations.bigquery import BigQueryColumnOperators
 
 
 
-GBQ_LOCATION = "`properati-data-public.properties_br.properties_rent_201501`"
-GBQ_COLUMN = "id"
+GBQ_LOCATION = "`idwall-data.dw_idwall.ft_attempts`"
+GBQ_COLUMN = "id_attempt"
 
 class TestBigQueryIntegration(object):
 
@@ -15,4 +15,4 @@ class TestBigQueryIntegration(object):
 
     def test_nonnull(self):
         column_operator = BigQueryColumnOperators(GBQ_LOCATION, GBQ_COLUMN)
-        assert column_operator.not_null().result is True
+        assert column_operator.not_null().result == True
