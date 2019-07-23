@@ -1,3 +1,6 @@
+import pandas as pd
+from meta_qa import QAResult
+
 class BaseIntegration:
     """
     Interface for implementing integrations.
@@ -13,15 +16,20 @@ class BaseIntegration:
         pass
 
 
-    def lower_than(self) -> QAResult:
+class BaseColumnOperators:
+
+    def __init__(self, table_name, column_name):
+        pass
+
+    def lower_than(self, other_column: str) -> QAResult:
         pass
 
 
-    def larger_than(self) -> QAResult:
+    def larger_than(self, other_column: str) -> QAResult:
         pass
 
 
-    def not_null(self) -> QAResult:
+    def not_null(self, tol: int=0) -> QAResult:
         pass
 
 
@@ -29,17 +37,32 @@ class BaseIntegration:
         pass
 
 
-    def not_percentile_null(self) -> QAResult:
+    def not_percentile_null(self, q: float=0.05) -> QAResult:
         pass
 
 
-    def not_window_percentile_null(self, q=0.05: float, days=90: float) -> QAResut:
+    def not_window_percentile_null(self,
+                                   q: float=0.05,
+                                   days: float=90) -> QAResult:
         pass
 
 
-    def timestamp_sanity(self):
+    def timestamp_sanity(self) -> QAResult:
         pass
 
 
-    def related_to(self):
+    def related_to(self, other_table: str, other_column: str='') -> QAResult:
+        pass
+
+
+    def formated_as(self, format: str) -> QAResult:
+        pass
+
+
+    def list_related_to(self,
+                        other_table: str,
+                        other_column: str='') -> QAResult:
+        pass
+
+    def between(self, lower_bound: float, upper_bound: float) -> QAResult:
         pass

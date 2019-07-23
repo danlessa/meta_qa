@@ -1,4 +1,9 @@
+import ast
+
 def parse_text(text: str) -> dict:
+    """
+    Separates the text into an dict.
+    """
     # Pre-processing
     if (text is None) or (len(text) == 0):
         return None
@@ -19,6 +24,9 @@ def parse_text(text: str) -> dict:
             splitted_var = variable.replace("@", "").split("=")
             if len(splitted_var) >= 2:
                 (key, value) = splitted_var[:2]
+                # Parse lists and dicts
+                if (value[0] == "[") or (value[0] == "{"):
+                    value = ast.literal_eval(value)
                 output[key] = value
     return output
 
