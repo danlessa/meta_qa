@@ -1,8 +1,9 @@
-import pandas as pd
 from types import SimpleNamespace
 
-from meta_qa.integrations.base import BaseIntegration
-from meta_qa.integrations.base import BaseColumnOperators
+import pandas as pd
+
+from meta_qa.integrations.base import BaseColumnOperators, BaseIntegration
+from meta_qa.parser import parse_task, parse_text
 
 
 class BigQueryIntegration(BaseIntegration):
@@ -11,11 +12,11 @@ class BigQueryIntegration(BaseIntegration):
     """
 
     def __init__(self, project_id, dataset):
-        self.project_id = project_id
-        self.dataset = dataset
+        self.column_operators = BigQueryColumnOperators
+        self.params = {"project_id": project_id,
+                       "dataset": dataset}
 
-
-    def load_table_metadata(self):
+    def load_table_metadata(self) -> pd.DataFrame:
         query = """
         SELECT  table_catalog,
                 table_schema,
@@ -23,11 +24,12 @@ class BigQueryIntegration(BaseIntegration):
                 option_value
         FROM {}.INFORMATION_SCHEMA.TABLE_OPTIONS as tables
         WHERE option_name = 'description'
-        """.format(self.dataset)
+        """.format(self.params["dataset"])
 
         table_metadata = pd.read_gbq(
-            query, project_id=self.project_id, dialect='standard')
-        def parse_f(df): return df.join(df["option_value"].map(parse_syntax)
+            query, project_id=self.params["project_id"], dialect='standard')
+
+        def parse_f(df): return df.join(df["option_value"].map(parse_text)
                                         .apply(pd.Series))
 
         def ignore_f(df): return df.assign(
@@ -42,45 +44,45 @@ class BigQueryIntegration(BaseIntegration):
                                         .pipe(ignore_f))
         return table_metadata
 
+    def load_column_metadata(self) -> pd.DataFrame:
+        query = """
+        SELECT table_catalog,
+               table_schema,
+               table_name,
+               field_path AS column_name,
+               data_type,
+               description
+        FROM {}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS as tables
+        """.format(self.params["dataset"])
 
-        def load_column_metadata(self):
-            query = """
-            SELECT table_catalog,
-                   table_schema,
-                   table_name,
-                   field_path AS column_name,
-                   data_type,
-                   description
-            FROM {}.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS as tables
-            """.format(self.dataset)
-            columns_metadata = (pd.read_gbq(query, project_id=self.project_id, dialect='standard')
-                                .set_index(["table_catalog",
-                                            "table_schema",
-                                            "table_name",
-                                            "column_name"]))
-            cols = ["data_type", "description"]
-            def parse_f(df): return df.join(df["description"].map(parse_syntax)
-                                            .apply(pd.Series))
-            columns_variables = (columns_metadata.loc[:, cols]
-                                                 .pipe(parse_f)
-                                                 .drop(columns=["description"])
-                                                 .fillna(''))
-            return columns_variables
+        columns_metadata = (pd.read_gbq(query,
+                                        project_id=self.params["project_id"],
+                                        dialect='standard')
+                            .set_index(["table_catalog",
+                                        "table_schema",
+                                        "table_name",
+                                        "column_name"]))
+        cols = ["data_type", "description"]
 
+        def parse_f(df): return df.join(df["description"].map(parse_text)
+                                        .apply(pd.Series))
 
-        def get_metadata(self):
-            table_metadata = load_table_metadata()
-            columnn_metadata = load_column_metadata()
-            metadata = (table_metadata.add_prefix("table_")
-                        .join(columns_metadata.add_prefix("column_")))
-            return metadata
+        columns_variables = (columns_metadata.loc[:, cols]
+                                             .pipe(parse_f)
+                                             .drop(columns=["description"])
+                                             .fillna(''))
+        return columns_variables
+
+    def get_metadata(self) -> pd.DataFrame:
+        table_metadata = self.load_table_metadata()
+        columns_metadata = self.load_column_metadata()
+        metadata = (table_metadata.add_prefix("table_")
+                    .join(columns_metadata.add_prefix("column_")))
+        return metadata
 
 
 class BigQueryColumnOperators(BaseColumnOperators):
 
-    def __init__(self, table: str, column_name: str):
-        self.table = table
-        self.column_name = column_name
 
     def qa_result(self, result, raw_result, operator):
         output = {"location": self.table,
