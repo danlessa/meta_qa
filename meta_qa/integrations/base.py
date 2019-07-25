@@ -40,7 +40,6 @@ class BaseIntegration:
         for task in df["tasks"]:
             operation_result = column_operator.function(task)
             column_output.append(operation_result)
-
         return column_output
 
 
@@ -79,8 +78,6 @@ class BaseColumnOperators:
         pos_args = params[1]["positional_args"]
         kw_args = params[1]["keyword_args"]
         function = task_function = getattr(self, function_name)
-        print(pos_args)
-        print(kw_args)
         return function(*pos_args, **kw_args)
 
     def lower_than(self, other_column: str) -> QAResult:

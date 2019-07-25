@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import datetime
 
 import pandas as pd
 
@@ -90,7 +91,7 @@ class BigQueryColumnOperators(BaseColumnOperators):
                   "result": result,
                   "raw_result": raw_result,
                   "operator": operator}
-        return SimpleNamespace(**output)
+        return output
 
     def lower_than(self, other_column_name: str) -> dict:
         params = {"table": self.table,
