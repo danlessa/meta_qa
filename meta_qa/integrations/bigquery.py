@@ -1,5 +1,5 @@
-from types import SimpleNamespace
 import datetime
+from types import SimpleNamespace
 
 import pandas as pd
 
@@ -84,17 +84,26 @@ class BigQueryIntegration(BaseIntegration):
 
 class BigQueryColumnOperators(BaseColumnOperators):
 
+    def __init__(self, project_id, dataset, table_name, column_name):
+        column_params = {"project_id": project_id,
+                         "dataset": dataset,
+                         "table_name": table_name,
+                         "column_name": column_name}
+        self.column_params = column_params
+        self.project_id = project_id
+        self.dataset = dataset
+        self.table_name = table_name
+        self.column_name = column_name
 
-    def qa_result(self, result, raw_result, operator):
-        output = {"location": self.table,
-                  "column_name": self.column_name,
-                  "result": result,
-                  "raw_result": raw_result,
-                  "operator": operator}
-        return output
+    def table_location(self, table_name=""):
+        if table_name == "":
+            table_name = self.table_name
+        return "`{}.{}.{}`".format(self.project_id,
+                                   self.dataset,
+                                   table_name)
 
     def lower_than(self, other_column_name: str) -> dict:
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name,
                   "other_column":  other_column_name}
         query = """
@@ -106,7 +115,7 @@ class BigQueryColumnOperators(BaseColumnOperators):
         return self.qa_result(condition, query_result, 'lower_than')
 
     def larger_than(self, other_column_name: str) -> dict:
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name,
                   "other_column":  other_column_name}
         query = """
@@ -118,7 +127,7 @@ class BigQueryColumnOperators(BaseColumnOperators):
         return self.qa_result(condition, query_result, 'larger_than')
 
     def not_null(self) -> dict:
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name}
         query = """
         SELECT COUNT({self_column}) / COUNT(*)
@@ -129,7 +138,7 @@ class BigQueryColumnOperators(BaseColumnOperators):
         return self.qa_result(condition, query_result, 'not_null')
 
     def not_duplicates(self) -> dict:
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name}
         query = """
         SELECT COUNT(DISTINCT({self_column})) / COUNT({self_column})
@@ -140,7 +149,7 @@ class BigQueryColumnOperators(BaseColumnOperators):
         return self.qa_result(condition, query_result, 'not_duplicates')
 
     def not_percentile_null(self, q: float = 0.05) -> dict:
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name}
         query = """
         SELECT COUNT({self_column}) / COUNT(*)
@@ -153,6 +162,10 @@ class BigQueryColumnOperators(BaseColumnOperators):
 
     def not_window_percentile_null(self, on: str = '',
                                    days: float = 90, q: float = 0.05) -> dict:
+        """
+        Checks if an given column has an certain quantity of nulls inside
+        an temporal windows of days until now.
+        """
 
         if on == '':
             on = self.column_name
@@ -161,27 +174,31 @@ class BigQueryColumnOperators(BaseColumnOperators):
         date_end = now.strftime('%Y-%m-%d')
         date_start = (now - datetime.timedelta(days=days)).strftime('%Y-%m-%d')
 
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name,
                   "on": on,
                   "date_start": date_start,
                   "date_end": date_end}
+
         query = """
         SELECT COUNT({self_column}) / COUNT(*)
         FROM {table}
         WHERE {on} < '{date_end}'
         AND {on} > '{date_start}'
         """.format(**params)
+
         query_result = (
             1 - pd.read_gbq(query, dialect='standard').values[0][0])
+
         condition = (query_result < q)
+
         return self.qa_result(condition, query_result, 'not_window_percentile_null')
 
     def timestamp_sanity(self) -> dict:
         now = datetime.datetime.today()
         date_end = (now + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 
-        params = {"table": self.table,
+        params = {"table": self.table_location(),
                   "self_column": self.column_name,
                   "sanity_start": '2016-01-01',
                   "sanity_end": date_end}
@@ -195,13 +212,16 @@ class BigQueryColumnOperators(BaseColumnOperators):
         condition = (query_result == 0)
         return self.qa_result(condition, query_result, 'timestamp_sanity')
 
-    def related_to(self, other_table: str, other_column: str = "") -> dict:
+    def related_to(self, other_table: str = "", other_column: str = "") -> dict:
         if other_column == "":
             other_column = self.column_name
-        params = {"table": self.table,
+        if other_table == "":
+            convert = lambda x: "lk_" + "_".join(x.split("_")[1:])
+            other_table = convert(other_table)
+        params = {"table": self.table_location(),
                   "self_column": self.column_name,
                   "other_column": other_column,
-                  "other_table": other_table}
+                  "other_table": self.table_location(other_table)}
         query = """
         SELECT COUNT(DISTINCT(t1.{self_column})) / COUNT(DISTINCT(t2.{other_column}))
         FROM {table} AS t1
@@ -210,3 +230,23 @@ class BigQueryColumnOperators(BaseColumnOperators):
         query_result = pd.read_gbq(query, dialect='standard').values[0][0]
         condition = (query_result == 1.0)
         return self.qa_result(condition, query_result, 'related_to')
+
+
+    def check_stage(self, stage_location, stage_column):
+
+        params = {"stage_location": stage_location,
+                  "stage_column": stage_column,
+                  "dw_location": self.table_location(),
+                  "dw_column": self.column_name}
+
+        query = """
+        SELECT  COUNT(t1.{stage_column})
+        FROM {stage_location} t1
+        LEFT OUTER JOIN {dw_location} AS t2
+        ON (t1.{stage_column} = t2.{dw_column})
+        WHERE t2.{dw_column} IS NULL
+        """.format(**params)
+
+        query_result = pd.read_gbq(query, dialect='standard').values[0][0]
+        condition = (query_result == 1.0)
+        return self.qa_result(condition, query_result, 'check_stage')

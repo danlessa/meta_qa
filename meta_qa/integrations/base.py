@@ -25,14 +25,13 @@ class BaseIntegration:
     def get_tasks(self, metadata: pd.DataFrame) -> pd.DataFrame:
         return metadata["column_assert"].apply(pd.Series).applymap(parse_task)
 
-
     def lambda_task(self, df):
         location = "`{}.{}.{}`".format(df["table_catalog"],
                                        df["table_schema"],
                                        df["table_name"])
 
         column_params = {"table_name": location,
-                          "column_name": df["column_name"]}
+                         "column_name": df["column_name"]}
         column_operator = self.column_operators(column_params)
 
         column_output = []
@@ -41,7 +40,6 @@ class BaseIntegration:
             operation_result = column_operator.function(task)
             column_output.append(operation_result)
         return column_output
-
 
     def run_pipeline(self) -> dict:
 
@@ -67,18 +65,30 @@ class BaseColumnOperators:
 
     def __init__(self, column_params: dict):
         self.params = column_params
-        self.table = column_params["table_name"]
+        self.table_name = column_params["table_name"]
         self.column_name = column_params["column_name"]
+
+    def qa_result(self, result, raw_result, operator):
+        output = {"result": result,
+                  "raw_result": raw_result,
+                  "operator": operator,
+                  **self.column_params}
+        return output
 
     def function(self, params: tuple):
         if params is None:
             return None
-
         function_name = params[0]
         pos_args = params[1]["positional_args"]
         kw_args = params[1]["keyword_args"]
         function = task_function = getattr(self, function_name)
-        return function(*pos_args, **kw_args)
+        try:
+            result = function(*pos_args, **kw_args)
+        except Exception as error:
+            result = self.qa_result(False, error, function_name)
+            print("Error: {} \n".format(result))
+        finally:
+            return result
 
     def lower_than(self, other_column: str) -> QAResult:
         pass
