@@ -233,8 +233,7 @@ class BigQueryColumnOperators(BaseColumnOperators):
 
 
     def check_stage(self, stage_location, stage_column):
-
-        params = {"stage_location": stage_location,
+        params = {"stage_location": "stage.stg_" + stage_location,
                   "stage_column": stage_column,
                   "dw_location": self.table_location(),
                   "dw_column": self.column_name}
@@ -248,5 +247,5 @@ class BigQueryColumnOperators(BaseColumnOperators):
         """.format(**params)
 
         query_result = pd.read_gbq(query, dialect='standard').values[0][0]
-        condition = (query_result == 1.0)
+        condition = (query_result == 0.0)
         return self.qa_result(condition, query_result, 'check_stage')
