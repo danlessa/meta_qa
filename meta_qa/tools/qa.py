@@ -56,6 +56,8 @@ def beautify_pipeline_cell(cell):
         raw_result = cell["raw_result"]
         if issubclass(type(raw_result), Exception):
             parenthesis = "error"
+        elif type(raw_result) is float:
+            parenthesis = "{:.2f}".format(raw_result)
         else:
             parenthesis = raw_result
         nice_result = "{} ({})".format(cell["result"], parenthesis)

@@ -1,0 +1,36 @@
+<div id="container">
+  <h1>Schema & metadata</h1>
+  <div id="metadata">
+    {% for project in projects %}
+    <h2>{{ project.project_name }}</h2>
+    <div>
+      {% for dataset in project.datasets %}
+      <h3>{{ dataset.dataset_name }}</h3>
+      <div>
+        {% for table in dataset.tables %}
+        <h4>{{ table.table_name }}</h4>
+        <table>
+          <tr>
+            {% for header in table.headers %}
+            <th>
+              {{ header }}
+            </th>
+            {% endfor %}
+          </tr>
+          {% for column in table.columns %}
+          <tr>
+            {% for variable in column %}
+            <td>
+              {{ variable }}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </table>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
