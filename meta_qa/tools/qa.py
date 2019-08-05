@@ -44,6 +44,7 @@ def run_qa_operators(tasks, integration, n_workers=None):
         operator_results.columns = [operator]
         output.append(operator_results)
     pipeline_result = pd.concat(output, sort=False, axis=1)
+
     return pipeline_result
 
 
@@ -69,4 +70,7 @@ def run_qa_pipeline(integration, n_workers=None):
     tasks = integration.get_tasks(metadata)
     pipeline_result = run_qa_operators(tasks, integration,
                                        n_workers=n_workers)
-    return pipeline_result.applymap(beautify_pipeline_cell)
+
+    nice_pipeline_result = pipeline_result.applymap(beautify_pipeline_cell)
+    return {"result": nice_pipeline_result,
+            "raw_result": pipeline_result}
